@@ -919,7 +919,7 @@ async function checkBackendSession() {
     }
 
     try {
-        const res = await fetch('/api/me');
+        const res = await fetch('/api/me', { credentials: 'include' });
         if (res.ok) {
             const data = await res.json();
             if (data.authenticated && data.user) {
@@ -931,7 +931,7 @@ async function checkBackendSession() {
             }
         }
     } catch (e) {
-        // Backend not running
+        // Backend not running or waking up
     }
 
     // Never auto-login without valid session
@@ -958,14 +958,20 @@ async function handleLogin(e) {
     try {
         const res = await fetch('/api/login', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u, password: p, remember: remember })
         });
-        const data = await res.json();
+        
+        let data = null;
+        try {
+            data = await res.json();
+        } catch (parseErr) {}
 
-        if (res.ok && data.success) {
+        if (res.ok && data && data.success) {
             useBackendAPI = true;
             currentUser = data.user;
+            localStorage.setItem('flmc_auth_user', JSON.stringify(currentUser));
             showToast('¡Bienvenido, ' + currentUser.full_name + '!', '✨');
             unlockDashboard(currentUser);
             await fetchAndLoadBackendData();
@@ -973,16 +979,26 @@ async function handleLogin(e) {
             btn.innerHTML = `<span>INICIAR SESIÓN</span>`;
             return;
         } else {
-            showToast(data.error || 'Credenciales inválidas', '❌');
+            const errorMsg = (data && data.error) ? data.error : 'Usuario o contraseña incorrectos';
+            showToast(errorMsg, '❌');
+            btn.disabled = false;
+            btn.innerHTML = `<span>INICIAR SESIÓN</span>`;
+            return;
         }
     } catch (err) {
-        // Fallback for file:// protocol direct opening
-        if ((u.toLowerCase() === 'montenegro' || u.toLowerCase() === 'montenegrocarhuapomaluisangell@gmail.com') && p === '123456') {
-            currentUser = { id: 1, username: 'Montenegro', full_name: 'Luis Ángel Montenegro', email: 'montenegrocarhuapomaluisangell@gmail.com', role: 'admin' };
-            showToast('Bienvenido, Sr. Montenegro', '✨');
-            unlockDashboard(currentUser);
+        // If explicitly opened as an offline standalone local file
+        if (window.location.protocol === 'file:') {
+            if ((u.toLowerCase() === 'montenegro' || u.toLowerCase() === 'montenegrocarhuapomaluisangell@gmail.com') && p === '123456') {
+                currentUser = { id: 1, username: 'Montenegro', full_name: 'Luis Ángel Montenegro', email: 'montenegrocarhuapomaluisangell@gmail.com', role: 'admin' };
+                showToast('Modo sin conexión local: Bienvenido', '✨');
+                unlockDashboard(currentUser);
+                loadDemoData();
+                updateDashboard();
+            } else {
+                showToast('Usuario o contraseña incorrecta', '❌');
+            }
         } else {
-            showToast('Usuario o contraseña incorrecta', '❌');
+            showToast('Conectando al servidor... Si está despertando, reintenta en unos segundos', '⚠️');
         }
     }
 
@@ -998,7 +1014,7 @@ function unlockDashboard(user) {
 async function handleLogout() {
     if (!confirm('¿Deseas cerrar tu sesión actual?')) return;
     try {
-        await fetch('/api/logout', { method: 'POST' });
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
     } catch(e) {}
     localStorage.removeItem('flmc_auth_user');
     currentUser = null;
@@ -1011,13 +1027,20 @@ async function handleLogout() {
 async function fetchAndLoadBackendData() {
     if (!useBackendAPI) return;
     try {
-        const res = await fetch('/api/data');
+        const res = await fetch('/api/data', { credentials: 'include' });
         if (res.ok) {
             const data = await res.json();
-            if (data.transactions) setData('transactions', data.transactions);
-            if (data.budgets) setData('budgets', data.budgets);
-            if (data.goals) setData('goals', data.goals);
+            
+            // Populate local cache specifically for this user
+            const uid = currentUser ? currentUser.id : 'guest';
+            localStorage.setItem(`flmc_u${uid}_transactions`, JSON.stringify(data.transactions || []));
+            localStorage.setItem(`flmc_u${uid}_budgets`, JSON.stringify(data.budgets || []));
+            localStorage.setItem(`flmc_u${uid}_goals`, JSON.stringify(data.goals || []));
+
             updateDashboard();
+            if (curPage === 'transactions') renderFullTransactions();
+            if (curPage === 'budgets') renderBudgetPage();
+            if (curPage === 'goals') renderGoalsPage();
         }
     } catch (e) {
         console.error('Error fetching SQLite data:', e);
@@ -1029,6 +1052,7 @@ async function syncToBackend() {
     try {
         await fetch('/api/data/sync', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 transactions: getData('transactions'),
@@ -1042,12 +1066,23 @@ async function syncToBackend() {
 }
 
 // ═══════════════════════════════════════
-// DATA LAYER (localStorage + auto-sync SQLite)
+// DATA LAYER (Per-User Isolation + Auto-Sync SQLite)
 // ═══════════════════════════════════════
-const SK = { transactions:'flmc_transactions', budgets:'flmc_budgets', goals:'flmc_goals' };
-function getData(k) { try { return JSON.parse(localStorage.getItem(SK[k])) || []; } catch { return []; } }
+function getUserStorageKey(k) {
+    const uid = currentUser ? currentUser.id : 'guest';
+    return `flmc_u${uid}_${k}`;
+}
+
+function getData(k) {
+    try {
+        return JSON.parse(localStorage.getItem(getUserStorageKey(k))) || [];
+    } catch {
+        return [];
+    }
+}
+
 function setData(k, d) {
-    localStorage.setItem(SK[k], JSON.stringify(d));
+    localStorage.setItem(getUserStorageKey(k), JSON.stringify(d));
     syncToBackend();
 }
 
@@ -1734,10 +1769,11 @@ function resetAllData() {
 }
 
 // ═══════════════════════════════════════
-// DEMO DATA
+// DEMO DATA (Solo para modo local sin backend)
 // ═══════════════════════════════════════
 function loadDemoData() {
-    if(getData('transactions').length>0) return;
+    if (useBackendAPI) return; // Si hay backend SQLite, los datos reales de la BD mandan
+    if (getData('transactions').length > 0) return;
     const now=new Date(),y=now.getFullYear(),m=now.getMonth();
     const mm=String(m+1).padStart(2,'0');
     const dt=[
@@ -1783,8 +1819,6 @@ window.addEventListener('beforeunload', () => {
 // INIT
 applyTheme(currentTheme);
 checkBackendSession();
-loadDemoData();
-updateDashboard();
 </script>
 </body>
 </html>

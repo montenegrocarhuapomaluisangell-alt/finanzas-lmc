@@ -9,6 +9,15 @@ DB_PATH = os.path.join(BASE_DIR, "finanzas_lmc.db")
 app = Flask(__name__, static_folder=BASE_DIR)
 app.secret_key = "finanzas-lmc-secure-key-#9812-montenegro"
 
+# Cross-origin and proxy session cookies configuration
+app.config.update(
+    SESSION_COOKIE_NAME='flmc_session',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=False, # Allows local IP and HTTP
+    PERMANENT_SESSION_LIFETIME=86400 * 365 * 10 # Sesion permanente (10 anos)
+)
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -152,6 +161,7 @@ def login():
     conn.close()
     
     if user and check_password_hash(user["password_hash"], password):
+        session.permanent = True
         session["user_id"] = user["id"]
         session["username"] = user["username"]
         session["full_name"] = user["full_name"]
