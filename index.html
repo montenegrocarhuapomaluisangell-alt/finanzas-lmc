@@ -45,6 +45,144 @@
             padding: 10px 14px;
         }
 
+        /* ═══════════════════════════════════════
+           LIGHT & DARK THEME ENGINE
+           ═══════════════════════════════════════ */
+        :root {
+            --bg-body: #030712;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+            --card-border: rgba(71, 85, 105, 0.3);
+            --header-bg: rgba(15, 23, 42, 0.4);
+            --header-border: rgba(51, 65, 85, 0.5);
+            --sidebar-bg: rgba(15, 23, 42, 0.85);
+            --sidebar-border: rgba(51, 65, 85, 0.5);
+            --sidebar-hover: rgba(30, 41, 59, 0.5);
+            --input-bg: rgba(30, 41, 59, 0.5);
+            --input-border: rgba(71, 85, 105, 0.5);
+            --table-hover: rgba(30, 41, 59, 0.3);
+            --table-border: rgba(51, 65, 85, 0.3);
+            --modal-bg: #0f172a;
+            --chart-grid: rgba(51, 65, 85, 0.3);
+            --chart-text: #94a3b8;
+        }
+
+        body.light-mode {
+            --bg-body: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --card-bg: #ffffff;
+            --card-border: rgba(226, 232, 240, 0.9);
+            --header-bg: rgba(255, 255, 255, 0.85);
+            --header-border: rgba(226, 232, 240, 0.8);
+            --sidebar-bg: #ffffff;
+            --sidebar-border: rgba(226, 232, 240, 0.8);
+            --sidebar-hover: rgba(241, 245, 249, 0.8);
+            --input-bg: #f8fafc;
+            --input-border: #cbd5e1;
+            --table-hover: rgba(248, 250, 252, 0.9);
+            --table-border: #e2e8f0;
+            --modal-bg: #ffffff;
+            --chart-grid: rgba(226, 232, 240, 0.8);
+            --chart-text: #64748b;
+        }
+
+        body {
+            background-color: var(--bg-body) !important;
+            color: var(--text-main) !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .glass-card {
+            background: var(--card-bg) !important;
+            border-color: var(--card-border) !important;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.25s ease;
+        }
+        body.light-mode .glass-card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        }
+
+        body.light-mode aside#sidebar {
+            background: var(--sidebar-bg) !important;
+            border-color: var(--sidebar-border) !important;
+        }
+        body.light-mode header {
+            background: var(--header-bg) !important;
+            border-color: var(--header-border) !important;
+        }
+        body.light-mode .text-white {
+            color: #0f172a !important;
+        }
+        body.light-mode .text-slate-400,
+        body.light-mode .text-slate-500 {
+            color: #64748b !important;
+        }
+        body.light-mode .bg-slate-900,
+        body.light-mode .bg-slate-900\/80,
+        body.light-mode .bg-slate-900\/50,
+        body.light-mode .bg-slate-900\/30 {
+            background-color: #ffffff !important;
+        }
+        body.light-mode .bg-slate-800,
+        body.light-mode .bg-slate-800\/50,
+        body.light-mode .bg-slate-800\/40,
+        body.light-mode .bg-slate-800\/60 {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .border-slate-800,
+        body.light-mode .border-slate-800\/50,
+        body.light-mode .border-slate-700,
+        body.light-mode .border-slate-700\/50 {
+            border-color: #e2e8f0 !important;
+        }
+        body.light-mode .sidebar-link:not(.bg-emerald-500\/10) {
+            color: #475569 !important;
+        }
+        body.light-mode .sidebar-link:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .divide-slate-800\/30 > tr {
+            border-color: #e2e8f0 !important;
+        }
+        body.light-mode .hover\:bg-slate-800\/30:hover {
+            background-color: #f8fafc !important;
+        }
+        body.light-mode input,
+        body.light-mode select {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        body.light-mode .logo-container {
+            background: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+        }
+        body.light-mode #toast > div {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        body.light-mode #toastMsg {
+            color: #0f172a !important;
+        }
+
+        /* Balance Negative badge pill */
+        .badge-negative {
+            background-color: rgba(244, 63, 94, 0.12);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.25);
+        }
+        .badge-positive {
+            background-color: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
         /* 3D Login Styles */
         #loginOverlay {
             perspective: 1200px;
@@ -293,6 +431,12 @@
             </span>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Theme Toggle Button (Dark / Light) -->
+            <button onclick="toggleTheme()" id="themeToggleBtn" class="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700/50 transition text-sm font-medium" title="Cambiar a Modo Claro / Oscuro">
+                <span id="themeIcon">☀️</span>
+                <span id="themeLabel" class="hidden md:inline text-xs font-semibold">Claro</span>
+            </button>
+
             <select id="timeRange" onchange="updateDashboard()" class="bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg px-2 sm:px-3 py-2">
                 <option value="week">Esta Semana</option>
                 <option value="month" selected>Este Mes</option>
@@ -504,6 +648,40 @@
 <div id="toast" class="fixed bottom-6 right-6 z-50 hidden"><div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3 fade-in"><span id="toastIcon" class="text-xl">✅</span><span id="toastMsg" class="text-sm text-slate-200"></span></div></div>
 
 <script>
+// ═══════════════════════════════════════
+// THEME ENGINE (DARK / LIGHT MODE)
+// ═══════════════════════════════════════
+let currentTheme = localStorage.getItem('flmc_theme') || 'dark';
+
+function applyTheme(theme) {
+    currentTheme = theme;
+    localStorage.setItem('flmc_theme', theme);
+    const body = document.body;
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+    const logoImg = document.querySelector('aside#sidebar .logo-container img');
+
+    if (theme === 'light') {
+        body.classList.add('light-mode');
+        if (icon) icon.textContent = '🌙';
+        if (label) label.textContent = 'Oscuro';
+        if (logoImg) logoImg.src = 'logo_dark_text.png';
+    } else {
+        body.classList.remove('light-mode');
+        if (icon) icon.textContent = '☀️';
+        if (label) label.textContent = 'Claro';
+        if (logoImg) logoImg.src = 'logo_white_text.png';
+    }
+
+    // Refresh charts with theme-adapted colors
+    if (cfChart) renderCashFlowChart();
+    if (edChart) renderExpenseDonut();
+}
+
+function toggleTheme() {
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
 // ═══════════════════════════════════════
 // 3D CARD TILT INTERACTION
 // ═══════════════════════════════════════
@@ -970,11 +1148,28 @@ function updateKPIs() {
     const lt=tx.filter(t=>{const d=new Date(t.date+'T12:00:00');return d.getMonth()===lm&&d.getFullYear()===ly;});
     const ls=lt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)-lt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const bc=ls!==0?(((sav-ls)/Math.abs(ls))*100).toFixed(1):(sav>0?100:0);
-    document.getElementById('kpiBalance').textContent=fmt(bal);
+
+    const balEl = document.getElementById('kpiBalance');
+    balEl.textContent = fmt(bal);
+    // Visual intelligence: red if negative, emerald if positive
+    if (bal < 0) {
+        balEl.className = "text-3xl font-extrabold text-rose-500 tabular-nums";
+    } else {
+        balEl.className = "text-3xl font-extrabold text-emerald-400 tabular-nums";
+    }
+
+    const savEl = document.getElementById('kpiSavings');
+    savEl.textContent = fmt(sav);
+    if (sav < 0) {
+        savEl.className = "text-3xl font-extrabold text-rose-500 tabular-nums";
+    } else {
+        savEl.className = "text-3xl font-extrabold text-white tabular-nums";
+    }
+
     document.getElementById('kpiIncome').textContent=fmt(inc);
     document.getElementById('kpiExpenses').textContent=fmt(exp);
-    document.getElementById('kpiSavings').textContent=fmt(sav);
     document.getElementById('kpiBalanceChange').textContent=(bc>=0?'+':'')+bc+'%';
+
     const gt=gs.reduce((s,g)=>s+g.target,0),gc=gs.reduce((s,g)=>s+g.current,0),gp=gt>0?Math.min((gc/gt)*100,100):0;
     document.getElementById('kpiSavingsBar').style.width=gp+'%';
     document.getElementById('kpiSavingsPercent').textContent=Math.round(gp);
@@ -985,10 +1180,14 @@ function updateKPIs() {
 // ═══════════════════════════════════════
 let cfChart=null, edChart=null;
 function renderCashFlowChart() {
+    const isLight = document.body.classList.contains('light-mode');
+    const gridColor = isLight ? 'rgba(203, 213, 225, 0.5)' : 'rgba(51, 65, 85, 0.3)';
+    const textColor = isLight ? '#64748b' : '#94a3b8';
+
     const tx=getData('transactions'),now=new Date(),ms=[],id=[],ed=[];
     for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);ms.push(d.toLocaleDateString('es-PE',{month:'short',year:'2-digit'}));const mt=tx.filter(t=>{const td=new Date(t.date+'T12:00:00');return td.getMonth()===d.getMonth()&&td.getFullYear()===d.getFullYear();});id.push(mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));ed.push(mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0));}
     if(cfChart)cfChart.destroy();
-    cfChart=new Chart(document.getElementById('cashFlowChart').getContext('2d'),{type:'bar',data:{labels:ms,datasets:[{label:'Ingresos',data:id,backgroundColor:'rgba(16,185,129,0.7)',borderColor:'#10b981',borderWidth:1,borderRadius:8,borderSkipped:false},{label:'Gastos',data:ed,backgroundColor:'rgba(244,63,94,0.7)',borderColor:'#f43f5e',borderWidth:1,borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e293b',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'#334155',borderWidth:1,cornerRadius:12,padding:12,callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{color:'#64748b'},border:{display:false}},y:{grid:{color:'rgba(51,65,85,0.3)'},ticks:{color:'#64748b',callback:v=>fmt(v)},border:{display:false}}},interaction:{intersect:false,mode:'index'}}});
+    cfChart=new Chart(document.getElementById('cashFlowChart').getContext('2d'),{type:'bar',data:{labels:ms,datasets:[{label:'Ingresos',data:id,backgroundColor:'rgba(16,185,129,0.7)',borderColor:'#10b981',borderWidth:1,borderRadius:8,borderSkipped:false},{label:'Gastos',data:ed,backgroundColor:'rgba(244,63,94,0.7)',borderColor:'#f43f5e',borderWidth:1,borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:isLight?'#ffffff':'#1e293b',titleColor:isLight?'#0f172a':'#e2e8f0',bodyColor:isLight?'#475569':'#94a3b8',borderColor:isLight?'#e2e8f0':'#334155',borderWidth:1,cornerRadius:12,padding:12,callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{color:textColor},border:{display:false}},y:{grid:{color:gridColor},ticks:{color:textColor,callback:v=>fmt(v)},border:{display:false}}},interaction:{intersect:false,mode:'index'}}});
 }
 function renderExpenseDonut() {
     const tx=getData('transactions'),now=new Date();
@@ -1394,6 +1593,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 // INIT
+applyTheme(currentTheme);
 checkBackendSession();
 loadDemoData();
 updateDashboard();
