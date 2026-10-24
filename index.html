@@ -1073,6 +1073,13 @@ async function checkBackendSession() {
         document.getElementById('rememberUser').checked = true;
     }
 
+    // Si el usuario cerró sesión expresamente, pedir credenciales siempre
+    if (localStorage.getItem('flmc_logged_out') === 'true') {
+        currentUser = null;
+        document.getElementById('loginOverlay').classList.remove('hidden');
+        return;
+    }
+
     try {
         const res = await fetch('/api/me', { credentials: 'include' });
         if (res.ok) {
@@ -1124,6 +1131,7 @@ async function handleLogin(e) {
         } catch (parseErr) {}
 
         if (res.ok && data && data.success) {
+            localStorage.removeItem('flmc_logged_out');
             useBackendAPI = true;
             currentUser = data.user;
             localStorage.setItem('flmc_auth_user', JSON.stringify(currentUser));
@@ -1144,6 +1152,7 @@ async function handleLogin(e) {
         // If explicitly opened as an offline standalone local file
         if (window.location.protocol === 'file:') {
             if ((u.toLowerCase() === 'montenegro' || u.toLowerCase() === 'montenegrocarhuapomaluisangell@gmail.com') && p === '123456') {
+                localStorage.removeItem('flmc_logged_out');
                 currentUser = { id: 1, username: 'Montenegro', full_name: 'Luis Ángel Montenegro', email: 'montenegrocarhuapomaluisangell@gmail.com', role: 'admin' };
                 showToast('Modo sin conexión local: Bienvenido', '✨');
                 unlockDashboard(currentUser);
@@ -1184,9 +1193,10 @@ async function handleLogout() {
     try {
         await fetch('/api/logout', { method: 'POST', credentials: 'include' });
     } catch(e) {}
+    localStorage.setItem('flmc_logged_out', 'true');
     localStorage.removeItem('flmc_auth_user');
     currentUser = null;
-    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginUsername').value = localStorage.getItem('flmc_remember_username') || '';
     document.getElementById('loginPassword').value = '';
     document.getElementById('loginOverlay').classList.remove('hidden');
     showToast('Sesión cerrada correctamente', '🔒');

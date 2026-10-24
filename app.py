@@ -9,6 +9,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "finanzas_lmc.db")
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+IS_POSTGRES = bool(DATABASE_URL)
+
 app = Flask(__name__, static_folder=BASE_DIR)
 app.secret_key = "finanzas-lmc-secure-key-#9812-montenegro"
 
@@ -18,13 +24,70 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=False, # Allows local IP and HTTP
-    PERMANENT_SESSION_LIFETIME=86400 * 365 * 10 # Sesion permanente (10 anos)
+    PERMANENT_SESSION_LIFETIME=86400 * 365 * 10 # 10 años cuando 'Recordar' está activado
 )
 
+class DBWrapper:
+    def __init__(self, raw_conn, is_pg):
+        self.conn = raw_conn
+        self.is_pg = is_pg
+
+    def cursor(self):
+        return DBCursor(self.conn.cursor(), self.is_pg)
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+class DBCursor:
+    def __init__(self, raw_cur, is_pg):
+        self.cur = raw_cur
+        self.is_pg = is_pg
+
+    def execute(self, query, params=None):
+        if self.is_pg:
+            pg_query = query.replace("?", "%s")
+            pg_query = pg_query.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+            pg_query = pg_query.replace("DATETIME DEFAULT CURRENT_TIMESTAMP", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            pg_query = pg_query.replace("DATETIME", "TIMESTAMP")
+            if params is not None:
+                return self.cur.execute(pg_query, params)
+            return self.cur.execute(pg_query)
+        else:
+            if params is not None:
+                return self.cur.execute(query, params)
+            return self.cur.execute(query)
+
+    def fetchone(self):
+        row = self.cur.fetchone()
+        if row is None:
+            return None
+        if self.is_pg:
+            cols = [d[0] for d in self.cur.description]
+            return dict(zip(cols, row))
+        return dict(row)
+
+    def fetchall(self):
+        rows = self.cur.fetchall()
+        if self.is_pg:
+            cols = [d[0] for d in self.cur.description]
+            return [dict(zip(cols, r)) for r in rows]
+        return [dict(r) for r in rows]
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if IS_POSTGRES:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        return DBWrapper(conn, is_pg=True)
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return DBWrapper(conn, is_pg=False)
 
 def init_db():
     conn = get_db()
@@ -34,39 +97,38 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        full_name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        role TEXT DEFAULT 'admin',
-        status TEXT DEFAULT 'pending',
-        phone TEXT,
+        role VARCHAR(50) DEFAULT 'admin',
+        status VARCHAR(50) DEFAULT 'pending',
+        phone VARCHAR(100),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
     
-    # Ensure migrations for existing DB
-    cursor.execute("PRAGMA table_info(users)")
-    u_cols = [r[1] for r in cursor.fetchall()]
-    if "status" not in u_cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
-    if "phone" not in u_cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN phone TEXT")
-    if "updated_at" not in u_cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN updated_at DATETIME")
+    if not IS_POSTGRES:
+        cursor.execute("PRAGMA table_info(users)")
+        u_cols = [r["name"] if isinstance(r, dict) else r[1] for r in cursor.fetchall()]
+        if "status" not in u_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active'")
+        if "phone" not in u_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(100)")
+        if "updated_at" not in u_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN updated_at DATETIME")
     
     # Transactions table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
+        type VARCHAR(50) NOT NULL,
         description TEXT NOT NULL,
-        amount REAL NOT NULL,
-        category TEXT NOT NULL,
-        date TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        amount NUMERIC NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        date VARCHAR(50) NOT NULL
     )
     """)
     
@@ -75,9 +137,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS budgets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        category TEXT NOT NULL,
-        limit_amount REAL NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        category VARCHAR(100) NOT NULL,
+        limit_amount NUMERIC NOT NULL
     )
     """)
     
@@ -86,11 +147,10 @@ def init_db():
     CREATE TABLE IF NOT EXISTS goals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        target REAL NOT NULL,
-        current REAL DEFAULT 0,
-        icon TEXT DEFAULT '🎯',
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        name VARCHAR(255) NOT NULL,
+        target NUMERIC NOT NULL,
+        current NUMERIC DEFAULT 0,
+        icon VARCHAR(50) DEFAULT '🎯'
     )
     """)
 
@@ -98,26 +158,29 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS registration_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT,
-        status TEXT DEFAULT 'pending',
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
     
     # Create default user 'Montenegro' if not exists
-    cursor.execute("SELECT * FROM users WHERE username = 'Montenegro' OR username = 'montenegro'")
+    cursor.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)", 
+                   ("Montenegro", "montenegrocarhuapomaluisangell@gmail.com"))
     user = cursor.fetchone()
     if not user:
         pwd_hash = generate_password_hash("123456")
         cursor.execute("""
         INSERT INTO users (username, full_name, email, password_hash, role, status)
-        VALUES (?, ?, ?, ?, ?, 'active')
-        """, ('Montenegro', 'Luis Ángel Montenegro', 'montenegrocarhuapomaluisangell@gmail.com', pwd_hash, 'admin'))
-        user_id = cursor.lastrowid
+        VALUES (?, ?, ?, ?, 'admin', 'active')
+        """, ('Montenegro', 'Luis Ángel Montenegro', 'montenegrocarhuapomaluisangell@gmail.com', pwd_hash))
         
-        # Insert initial demo data for Montenegro
+        cursor.execute("SELECT id FROM users WHERE LOWER(username) = 'montenegro' OR LOWER(email) = 'montenegrocarhuapomaluisangell@gmail.com'")
+        user_id = cursor.fetchone()["id"]
+        
+        # Insert initial clean demo data for Montenegro
         cursor.execute("INSERT INTO transactions (user_id, type, description, amount, category, date) VALUES (?, ?, ?, ?, ?, ?)",
                        (user_id, 'income', 'Sueldo mensual', 5200.0, 'Salario', '2026-10-01'))
         cursor.execute("INSERT INTO transactions (user_id, type, description, amount, category, date) VALUES (?, ?, ?, ?, ?, ?)",
@@ -144,6 +207,8 @@ def init_db():
                        (user_id, 'Inversión en Bienes Raíces', 50000.0, 12000.0, '🏢'))
         cursor.execute("INSERT INTO goals (user_id, name, target, current, icon) VALUES (?, ?, ?, ?, ?)",
                        (user_id, 'Viaje Internacional', 8000.0, 5400.0, '✈️'))
+    else:
+        cursor.execute("UPDATE users SET status = 'active', role = 'admin' WHERE LOWER(username) = 'montenegro' OR LOWER(email) = 'montenegrocarhuapomaluisangell@gmail.com'")
         
     conn.commit()
     conn.close()
@@ -166,6 +231,7 @@ def login():
     data = request.json or {}
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
+    remember = data.get("remember", False)
     
     if not username or not password:
         return jsonify({"success": False, "error": "Ingresa usuario y contraseña"}), 400
@@ -189,7 +255,9 @@ def login():
                 "error": "Tu cuenta ha sido rechazada o suspendida por el administrador."
             }), 403
 
-        session.permanent = True
+        # Si el usuario marco 'Recordar en este equipo', la sesion dura 10 anos.
+        # Si NO lo marco, la sesion se cierra al cerrar el navegador.
+        session.permanent = bool(remember)
         session["user_id"] = user["id"]
         session["username"] = user["username"]
         session["full_name"] = user["full_name"]
@@ -210,7 +278,9 @@ def login():
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.clear()
-    return jsonify({"success": True})
+    res = jsonify({"success": True})
+    res.delete_cookie("flmc_session")
+    return res
 
 @app.route("/api/me", methods=["GET"])
 def me():
